@@ -115,8 +115,24 @@ fn origin_allowed(headers: &HeaderMap) -> bool {
                 || o.starts_with("file://")
                 || o.starts_with("chrome-extension://")
                 || o.starts_with("moz-extension://")
+                || same_host_origin(headers, o)
         }
     }
+}
+
+/// 局域网/非回环访问面板时的同源校验：Origin 的 host 必须与请求 Host 头一致。
+/// 这是标准同源判定（浏览器对跨站请求无法伪造 Origin），既放行本机 NAS 面板，
+/// 又拦截跨站 CSRF（evil.com 的 Origin 与 Host 不等）。
+fn same_host_origin(headers: &HeaderMap, origin: &str) -> bool {
+    let host = match headers.get("host").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return false,
+    };
+    let o_host = match origin.split_once("://") {
+        Some((_scheme, rest)) => rest.split('/').next().unwrap_or(""),
+        None => return false,
+    };
+    !o_host.is_empty() && o_host.eq_ignore_ascii_case(host)
 }
 
 /// 把真实 TCP 对端（axum `ConnectInfo<SocketAddr>` 扩展）写入 `x-fb-peer` 头，供 is_loopback_request 判定。
