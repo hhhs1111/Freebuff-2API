@@ -10,6 +10,9 @@ RUN mkdir -p src && echo 'fn main(){}' > src/main.rs && echo '' > src/lib.rs && 
     cargo fetch
 
 COPY src/ src/
+# 源码用 include_str!/include_bytes! 内嵌了这两个目录,缺了直接编译失败
+COPY browser-extension/ browser-extension/
+COPY tests/ tests/
 RUN touch src/main.rs src/lib.rs && \
     cargo build --release
 
